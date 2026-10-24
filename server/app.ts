@@ -1,5 +1,4 @@
 import Fastify from "fastify";
-import fastifyStatic from "@fastify/static";
 import { resolve } from "node:path";
 import type { BoardService } from "./service.js";
 export async function createApp(
@@ -46,6 +45,7 @@ export async function createApp(
       .send({ error: status === 400 ? "Invalid request" : "Request failed" });
   });
   if (production) {
+    const { default: fastifyStatic } = await import("@fastify/static");
     await app.register(fastifyStatic, { root: resolve("dist/client") });
     app.setNotFoundHandler((request, reply) =>
       request.url.startsWith("/api/")

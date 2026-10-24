@@ -4,6 +4,12 @@ Mis à jour le 24 octobre 2026. Implémentation locale terminée et vérifiée. 
 
 ## Hébergement Vercel et cache Upstash — 24 octobre 2026
 
+### Correction du démarrage Vercel
+
+- Erreur de déploiement rapportée : `@fastify/static` charge `content-disposition` avec `require()`, rejeté par le runtime Vercel pour ce module ESM.
+- Import de `@fastify/static` déplacé dans la branche servant les fichiers statiques en production locale. La fonction Vercel utilise la branche API seule et ne charge plus ce plugin au démarrage.
+- Test de régression simulant un plugin statique impossible à charger : initialisation API et health HTTP 200 réussies. TypeScript, lint, 28/28 tests et build réussis ; frontend compilé et health vérifiés HTTP 200 via Fastify inject en mode production locale. `git diff --check` réussi. Correction non déployée ; confirmation sur Vercel après redéploiement encore nécessaire.
+
 - Ajout de `api/[...path].ts` : adaptateur HTTP Node vers les routes Fastify existantes, sans serveur permanent ni fichiers statiques dans la fonction. `vercel.json` conserve le frontend Vite dans `dist/client` et configure une durée maximale de 120 secondes.
 - Cache extrait derrière une interface : fichier local atomique conservé ; Redis REST sur Vercel, sans nouvelle dépendance. Variables Upstash standard, Vercel KV et préfixe utilisateur `CACHE_WORLDS_` reconnus. `.env.local` reste ignoré par Git.
 - Snapshot partagé validé et relu par requête, verrou Redis entre instances, réutilisation des données récentes et temporisation de 55 secondes. Cache sans expiration ; clés Production/Preview séparées ; réponses API `no-store`. Échecs de persistance signalés, collecte des sources tentée même si Redis est indisponible.
