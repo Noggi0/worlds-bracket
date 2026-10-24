@@ -1,4 +1,25 @@
-# Worlds 2026 — local tournament board
+# Worlds 2026 — tournament board
+
+## Déploiement Vercel avec Upstash
+
+Le même projet Vercel héberge le frontend Vite et les routes Fastify `/api/board`, `/api/refresh` et `/api/health`. `vercel.json` configure le build, la sortie `dist/client` et la fonction Node dans `api/[...path].ts`. Ne pas définir `server/` comme Root Directory : garder la racine du dépôt. Le serveur local reste disponible avec les commandes habituelles et son cache disque.
+
+1. Dans le projet Vercel existant, connecter le storage Upstash depuis Storage et sélectionner l’environnement Production (Preview également si souhaité).
+2. Vérifier la présence des variables serveur `CACHE_WORLDS_KV_REST_API_URL` et `CACHE_WORLDS_KV_REST_API_TOKEN`, correspondant au préfixe choisi pour ce projet. Les paires `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` et `KV_REST_API_URL` / `KV_REST_API_TOKEN` sont aussi reconnues. Utiliser le token en écriture, pas le token read-only. Aucun préfixe `VITE_` pour ces secrets.
+3. Publier les modifications du code puis relancer le déploiement. Le fichier local `.env.local` n’est pas envoyé à Vercel et ne remplace pas ses variables d’environnement.
+4. Vérifier `/api/health` (`{"ok":true}`), puis ouvrir le site pour vérifier les données et Last checked. Health valide le routage ; une actualisation valide aussi Redis et les sources.
+
+Redis conserve le même snapshot versionné et validé que le fichier local, sans expiration automatique afin de garder le dernier état en cas de panne prolongée des sources. Un verrou Redis limite la collecte à une instance, avec réutilisation des données récentes pendant 55 secondes et temporisation après échec. Une autre instance peut afficher le cache avec une indication d’actualisation en cours. Si Redis échoue, la collecte des sources reste tentée et l’échec de persistance est signalé. Les réponses API sont `no-store` pour éviter un cache HTTP obsolète.
+
+Les clés Production et Preview sont séparées via `VERCEL_ENV`. `REDIS_CACHE_KEY` permet de définir explicitement une clé pour un autre projet ou tournoi. Les previews partagent leur clé par défaut ; choisir des bases/identifiants distincts si une isolation complète est nécessaire.
+
+Pour tester localement l’adaptateur Vercel avec la vraie base et les sources, après avoir enregistré les variables dans `.env.local` :
+
+```powershell
+node --env-file=.env.local --import tsx scripts/verify-cloud.ts
+```
+
+Cette commande utilise une clé temporaire indépendante, la supprime en fin de test et n’affiche pas les secrets. Les quotas gratuits restent dépendants du trafic et du volume des snapshots échangés.
 
 Application locale React, Vite, TypeScript et Fastify. Interface en anglais, mode sombre. Les trois phases affichent les données Riot et les historiques Leaguepedia, sans données de démonstration dans l’application.
 

@@ -2,7 +2,10 @@ import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { resolve } from "node:path";
 import type { BoardService } from "./service.js";
-export async function createApp(service: BoardService, production = false) {
+export async function createApp(
+  service: Pick<BoardService, "get" | "refresh" | "close">,
+  production = false,
+) {
   const app = Fastify({
     logger: process.env.NODE_ENV !== "test",
     ajv: { customOptions: { removeAdditional: false } },

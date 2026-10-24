@@ -2,6 +2,16 @@
 
 Mis à jour le 24 octobre 2026. Implémentation locale terminée et vérifiée. Documents de référence inchangés.
 
+## Hébergement Vercel et cache Upstash — 24 octobre 2026
+
+- Ajout de `api/[...path].ts` : adaptateur HTTP Node vers les routes Fastify existantes, sans serveur permanent ni fichiers statiques dans la fonction. `vercel.json` conserve le frontend Vite dans `dist/client` et configure une durée maximale de 120 secondes.
+- Cache extrait derrière une interface : fichier local atomique conservé ; Redis REST sur Vercel, sans nouvelle dépendance. Variables Upstash standard, Vercel KV et préfixe utilisateur `CACHE_WORLDS_` reconnus. `.env.local` reste ignoré par Git.
+- Snapshot partagé validé et relu par requête, verrou Redis entre instances, réutilisation des données récentes et temporisation de 55 secondes. Cache sans expiration ; clés Production/Preview séparées ; réponses API `no-store`. Échecs de persistance signalés, collecte des sources tentée même si Redis est indisponible.
+- README et exemple de variables actualisés. Script `scripts/verify-cloud.ts` pour tester l’adaptateur HTTP avec la vraie base dans des clés temporaires nettoyées en fin de test.
+- Vérification réelle avec `.env.local` : Redis PONG, health et refresh HTTP 200, 46 séries, aucune erreur ni alerte, snapshot de 149 509 octets relu sans nouvelle collecte. Clés de vérification supprimées, aucun secret affiché.
+- TypeScript, lint, build et `git diff --check` réussis. 27/27 tests métier/backend (dont cinq nouveaux tests Redis/cloud) et 13/13 tests Chromium sur le build local de production au port 3004 réussis, avec sources réelles.
+- Aucun commit, push ou déploiement. Fonctionnement sur Vercel à vérifier après publication du code et présence des variables Upstash dans Production. Documents de référence inchangés.
+
 ## Livré
 
 - React/Vite, Fastify, TypeScript strict, contrats partagés et validation Zod des sources externes.

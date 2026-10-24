@@ -1,5 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { FileCache, type CacheStore } from "./cache.js";
 import { z } from "zod";
 import {
   boardSchema,
@@ -41,36 +40,41 @@ export class BoardService {
   private flight: Promise<Board> | null = null;
   private readonly wikiParser = new WikiParser();
   private cacheError: string | null = null;
+  private readonly cache: CacheStore;
   constructor(
-    private readonly cachePath: string,
+    cache: string | CacheStore,
     private readonly sources: Sources = {
       structure: fetchStructure,
       schedule: fetchSchedule,
       wiki: fetchWiki,
     },
-  ) {}
-  async load(): Promise<void> {
+  ) {
+    this.cache = typeof cache === "string" ? new FileCache(cache) : cache;
+  }
+  async load(markStale = true): Promise<void> {
     try {
-      const cached = cacheSchema.parse(
-        JSON.parse(await readFile(this.cachePath, "utf8")),
-      );
+      const value = await this.cache.read();
+      if (value === null) return;
+      const cached = cacheSchema.parse(JSON.parse(value));
       this.structure = cached.structure;
       this.schedule = cached.schedule;
       this.pages = cached.pages;
-      this.board = {
-        ...cached.board,
-        stale: true,
-        errors: ["Cached data · awaiting source refresh"],
-        phases: cached.board.phases.map((p) => ({
-          ...p,
-          complete: false,
-          matches: p.matches.map((m) => ({
-            ...m,
+      this.board = markStale
+        ? {
+            ...cached.board,
             stale: true,
-            history: { ...m.history, stale: true },
-          })),
-        })),
-      };
+            errors: ["Cached data · awaiting source refresh"],
+            phases: cached.board.phases.map((p) => ({
+              ...p,
+              complete: false,
+              matches: p.matches.map((m) => ({
+                ...m,
+                stale: true,
+                history: { ...m.history, stale: true },
+              })),
+            })),
+          }
+        : cached.board;
     } catch (error) {
       if (!(
         error instanceof Error &&
@@ -78,7 +82,7 @@ export class BoardService {
         error.code === "ENOENT"
       ))
         this.cacheError =
-          "Local cache could not be read; fetching sources again";
+          "Persistent cache could not be read; fetching sources again";
     }
   }
   async close(): Promise<void> {
@@ -153,9 +157,7 @@ export class BoardService {
     if (this.cacheError) board.warnings.push(this.cacheError);
     this.board = board;
     try {
-      await mkdir(dirname(this.cachePath), { recursive: true });
-      await writeFile(
-        `${this.cachePath}.tmp`,
+      await this.cache.write(
         JSON.stringify({
           version: 1,
           structure: this.structure,
@@ -164,10 +166,9 @@ export class BoardService {
           board,
         }),
       );
-      await rename(`${this.cachePath}.tmp`, this.cachePath);
       this.cacheError = null;
     } catch {
-      board.errors.push("Local cache could not be saved");
+      board.errors.push("Cache could not be saved");
       board.stale = true;
       board.lastChecked = lastChecked;
     }
