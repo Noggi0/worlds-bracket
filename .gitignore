@@ -190,3 +190,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/node,vercel,windows,visualstudiocode
+# Worlds board local artifacts
+dist/
+.cache/
+tests/
+test-results/
+playwright-report/
